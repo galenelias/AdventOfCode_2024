@@ -1,19 +1,12 @@
 use itertools::Itertools;
 
 fn is_safe(report: &[i32]) -> bool {
-	let mut is_increasing = true;
-	let mut is_decreasing = true;
-	for i in 1..report.len() {
-		let diff = report[i] - report[i - 1];
-		if !(diff >= 1 && diff <= 3) {
-			is_increasing = false;
-		}
-
-		if !(diff >= -3 && diff <= -1) {
-			is_decreasing = false;
-		}
-	}
-
+	let deltas = report
+		.windows(2)
+		.map(|pair| pair[1] - pair[0])
+		.collect_vec();
+	let is_decreasing = deltas.iter().all(|&x| x >= -3 && x <= -1);
+	let is_increasing = deltas.iter().all(|&x| x >= 1 && x <= 3);
 	return is_decreasing || is_increasing;
 }
 
@@ -26,19 +19,17 @@ pub fn solve(inputs: Vec<String>) {
 				.collect_vec()
 		})
 		.collect_vec();
+
 	let part1 = reports.iter().filter(|report| is_safe(report)).count();
 	let part2 = reports
 		.iter()
 		.filter(|&report| {
-			let mut any_safe = is_safe(report);
-			for i in 0..report.len() {
-				let mut report_clone = report.clone();
-				report_clone.remove(i);
-
-				any_safe = any_safe || is_safe(&report_clone);
-			}
-
-			return any_safe;
+			is_safe(report)
+				|| (0..report.len()).any(|i| {
+					let mut report_clone = report.clone();
+					report_clone.remove(i);
+					is_safe(&report_clone)
+				})
 		})
 		.count();
 
