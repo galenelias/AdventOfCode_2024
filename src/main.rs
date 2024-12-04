@@ -11,6 +11,7 @@ use std::io::{self, BufRead};
 mod day01;
 mod day02;
 mod day03;
+mod day04;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -57,6 +58,7 @@ fn main() {
 		1 => day01::solve(input),
 		2 => day02::solve(input),
 		3 => day03::solve(input),
+		4 => day04::solve(input),
 
 		_ => println!("Oops! Day {} isn't implemented yet!", cli.day),
 	}
