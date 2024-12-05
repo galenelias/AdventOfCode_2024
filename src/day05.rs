@@ -38,16 +38,20 @@ fn fix_update(update: &mut Vec<usize>, rules: &[(usize, usize)]) {
 }
 
 pub fn solve(inputs: Vec<String>) {
-	let (rule_lines, mut update_lines) = inputs.split_at(inputs.iter().position(|x| x.is_empty()).unwrap());
-	update_lines = &update_lines[1..];
+	let (rule_lines, mut update_lines) =
+		inputs.split_at(inputs.iter().position(|x| x.is_empty()).unwrap());
+	update_lines = &update_lines[1..]; // Omit the empty line
 
-	let rules = rule_lines.iter().map(|rule_str| {
-		let rule_parts = rule_str.split_once('|').unwrap();
-		(
-			rule_parts.0.parse::<usize>().unwrap(),
-			rule_parts.1.parse::<usize>().unwrap(),
-		)
-	}).collect_vec();
+	let rules = rule_lines
+		.iter()
+		.map(|rule_str| {
+			let rule_parts = rule_str.split_once('|').unwrap();
+			(
+				rule_parts.0.parse::<usize>().unwrap(),
+				rule_parts.1.parse::<usize>().unwrap(),
+			)
+		})
+		.collect_vec();
 
 	let mut part1 = 0;
 	let mut part2 = 0;

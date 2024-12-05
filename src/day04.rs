@@ -65,7 +65,11 @@ pub fn solve(inputs: Vec<String>) {
 	println!("Part 1: {part1}");
 
 	let part2 = (0..grid.len())
-		.map(|r| (0..grid[r].len()).filter(|c| is_x_mas(&grid, r, *c)).count())
+		.map(|r| {
+			(0..grid[r].len())
+				.filter(|c| is_x_mas(&grid, r, *c))
+				.count()
+		})
 		.sum::<usize>();
 
 	println!("Part 2: {part2}");
