@@ -38,9 +38,7 @@ fn fix_update(update: &mut Vec<usize>, rules: &[(usize, usize)]) {
 }
 
 pub fn solve(inputs: Vec<String>) {
-	let (rule_lines, mut update_lines) =
-		inputs.split_at(inputs.iter().position(|x| x.is_empty()).unwrap());
-	update_lines = &update_lines[1..]; // Omit the empty line
+	let (rule_lines, update_lines) = inputs.split(|x| x.is_empty()).collect_tuple().unwrap();
 
 	let rules = rule_lines
 		.iter()
