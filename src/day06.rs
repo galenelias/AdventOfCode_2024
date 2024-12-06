@@ -45,7 +45,7 @@ fn move_guard(
 	}
 }
 
-fn part1(grid: &Vec<Vec<char>>, mut guard_pos: (isize, isize)) {
+fn part1(grid: &Vec<Vec<char>>, mut guard_pos: (isize, isize)) -> HashSet<(isize, isize)> {
 	let mut dir = Direction::Up;
 	let mut visited = HashSet::new();
 	loop {
@@ -60,6 +60,7 @@ fn part1(grid: &Vec<Vec<char>>, mut guard_pos: (isize, isize)) {
 	}
 
 	println!("Part 1: {}", visited.len());
+	return visited;
 }
 
 fn is_loop(grid: &Vec<Vec<char>>, mut guard_pos: (isize, isize)) -> bool {
@@ -82,17 +83,16 @@ fn is_loop(grid: &Vec<Vec<char>>, mut guard_pos: (isize, isize)) -> bool {
 	}
 }
 
-fn part2(mut grid: Vec<Vec<char>>, guard_pos: (isize, isize)) {
+fn part2(mut grid: Vec<Vec<char>>, visited: &HashSet<(isize, isize)>, guard_pos: (isize, isize)) {
 	let mut part2 = 0;
-	for r in 0..grid.len() {
-		for c in 0..grid[0].len() {
-			if grid[r][c] == '.' {
-				grid[r][c] = '#';
-				if is_loop(&grid, guard_pos) {
-					part2 += 1;
-				}
-				grid[r][c] = '.';
+	for (r, c) in visited {
+		let (r, c) = (*r as usize, *c as usize);
+		if grid[r][c] == '.' {
+			grid[r][c] = '#';
+			if is_loop(&grid, guard_pos) {
+				part2 += 1;
 			}
+			grid[r][c] = '.';
 		}
 	}
 	println!("Part 2: {}", part2);
@@ -118,6 +118,6 @@ pub fn solve(inputs: Vec<String>) {
 		})
 		.unwrap();
 
-	part1(&grid, guard_pos);
-	part2(grid, guard_pos);
+	let visited = part1(&grid, guard_pos);
+	part2(grid, &visited, guard_pos);
 }
