@@ -11,7 +11,7 @@ pub fn solve(inputs: Vec<String>) {
 			acc
 		});
 
-	for _ in 0..75 {
+	for i in 0..75 {
 		let mut new_stones = HashMap::with_capacity(stones.len());
 		for (stone, freq) in stones {
 			if stone == 0 {
@@ -30,7 +30,10 @@ pub fn solve(inputs: Vec<String>) {
 			}
 		}
 		stones = new_stones;
+		if i == 24 {
+			println!("Part1: {}", stones.values().sum::<u64>());
+		}
 	}
 
-	println!("Part1: {}", stones.values().sum::<u64>());
+	println!("Part2: {}", stones.values().sum::<u64>());
 }
