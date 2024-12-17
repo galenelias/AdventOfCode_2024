@@ -31,27 +31,8 @@ fn run_program(program: &[i64], mut regs: [i64; 3]) -> Vec<i64> {
 			4 => regs[1] ^= regs[2],                                              // bxc
 			5 => result.push(get_combo_operand(&regs, operand) % 8),              // out
 			6 => regs[1] = regs[0] / (1i64 << get_combo_operand(&regs, operand)), // bdv
-			7 => regs[2] = regs[0] / (1i64 << get_combo_operand(&regs, operand)), // cdv }
+			7 => regs[2] = regs[0] / (1i64 << get_combo_operand(&regs, operand)), // cdv
 			_ => unreachable!(),
-		}
-	}
-
-	return result;
-}
-
-fn run_program2(mut a: i64) -> Vec<i64> {
-	let mut result = Vec::with_capacity(16);
-
-	loop {
-		let mut b = a & 7;
-		b ^= 5;
-		let c = (a >> b) & 7;
-		b ^= c;
-		b ^= 6;
-		result.push(b);
-		a >>= 3;
-		if a == 0 {
-			break;
 		}
 	}
 
@@ -62,32 +43,23 @@ fn run_program2(mut a: i64) -> Vec<i64> {
 // by chunks of 3 bits, starting at the most significant bits first.
 // There can be multiple valid values of each set of 3 bits, so we need to use
 // a recursive function to try all possible values.
-fn solve_part2(program: &[i64], a_input: i64, digit: usize) -> Option<i64> {
+fn subsolve_part2(program: &[i64], regs: &[i64; 3], a_input: i64, digit: usize) -> Option<i64> {
 	if digit == program.len() {
-		// Reached the end! Unshift the answer
 		return Some(a_input);
 	}
-	let a_input = a_input << 3; // Shift if over to start working on the next digit
+	let a_input = a_input << 3; // Shift it over to start working on the next digit
 
-	// Try all possible values for the next 3 bits
-	'outer: for val in 0..8 {
-		let mut a = a_input | val;
+	// Try all possible values for the next 3 bits of A
+	for val in 0..8 {
+		let sub_regs = [a_input | val, regs[1], regs[2]];
+		let result = run_program(program, sub_regs);
 
-		// Now verify that all the digits so far still generate correctly
-		for i in 0..=digit {
-			let mut b = a & 7;
-			b ^= 5;
-			let c = (a >> b) & 7;
-			b ^= c;
-			b ^= 6;
-
-			if program[program.len() - digit - 1 + i] != b {
-				continue 'outer;
-			}
-			a >>= 3;
+		// Verify that the result matches the last `digit` values of the program
+		if result != program[program.len() - digit - 1..] {
+			continue;
 		}
 
-		if let Some(result) = solve_part2(program, a_input | val, digit + 1) {
+		if let Some(result) = subsolve_part2(program, regs, a_input | val, digit + 1) {
 			return Some(result);
 		}
 	}
@@ -101,14 +73,17 @@ pub fn solve(inputs: Vec<String>) {
 		.collect_tuple()
 		.unwrap();
 
-	let parse_reg = |s: &str| s.split_once(": ").unwrap().1.parse::<i64>().unwrap();
+	let parse_reg = |i: usize| {
+		registers[i]
+			.split_once(": ")
+			.unwrap()
+			.1
+			.parse::<i64>()
+			.unwrap()
+	};
+	let regs = [parse_reg(0), parse_reg(1), parse_reg(2)];
 
-	let mut regs = [0, 0, 0];
-	regs[0] = parse_reg(&registers[0]);
-	regs[1] = parse_reg(&registers[1]);
-	regs[2] = parse_reg(&registers[2]);
-
-	let ops = program[0]
+	let program = program[0]
 		.split_once(": ")
 		.unwrap()
 		.1
@@ -116,10 +91,10 @@ pub fn solve(inputs: Vec<String>) {
 		.map(|s| s.parse::<i64>().unwrap())
 		.collect_vec();
 
-	let part1 = run_program(&ops, regs.clone());
+	let part1 = run_program(&program, regs.clone());
 	println!("Part 1: {}", part1.iter().map(|x| x.to_string()).join(","));
 
-	let result = solve_part2(&ops, 0, 0);
+	let result = subsolve_part2(&program, &regs, 0, 0);
 	println!(
 		"Part 2: {}",
 		result.expect("Failed to find a valid part solution")
