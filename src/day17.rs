@@ -27,7 +27,7 @@ fn run_program(program: &[i64], mut regs: [i64; 3]) -> Vec<i64> {
 				if regs[0] != 0 {
 					pc = operand as usize;
 				}
-			}                       // jnz
+			}   // jnz
 			4 => regs[1] ^= regs[2],                                              // bxc
 			5 => result.push(get_combo_operand(&regs, operand) % 8),              // out
 			6 => regs[1] = regs[0] / (1i64 << get_combo_operand(&regs, operand)), // bdv

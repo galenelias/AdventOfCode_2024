@@ -1,25 +1,25 @@
 use itertools::Itertools;
 
 fn concat_nums(num1: i64, num2: i64) -> i64 {
-    let num2_digits = num2.checked_ilog10().unwrap() + 1;
-    num1 * 10i64.pow(num2_digits as u32) + num2
+	let num2_digits = num2.checked_ilog10().unwrap() + 1;
+	num1 * 10i64.pow(num2_digits as u32) + num2
 }
 
 fn can_total(goal_total: i64, parts: &[i64], op_count: usize) -> bool {
 	let bits = parts.len() - 1;
 
-    // Represent possible sets of operations as a binary/ternary number, where each digit represents an operation.
-    // Apply the operation by taking the digit's value mod op_count.
+	// Represent possible sets of operations as a binary/ternary number, where each digit represents an operation.
+	// Apply the operation by taking the digit's value mod op_count.
 	for mut perm in 0..op_count.pow(bits as u32) {
 		let mut total = parts[0];
 		for i in 0..parts.len() - 1 {
-            match perm % op_count {
-                0 => total += parts[i + 1],
-                1 => total *= parts[i + 1],
-                2 => total = concat_nums(total, parts[i + 1]),
-                _ => unreachable!(),
-            };
-            perm /= op_count;
+			match perm % op_count {
+				0 => total += parts[i + 1],
+				1 => total *= parts[i + 1],
+				2 => total = concat_nums(total, parts[i + 1]),
+				_ => unreachable!(),
+			};
+			perm /= op_count;
 		}
 
 		if total == goal_total {
@@ -48,6 +48,6 @@ pub fn solve(inputs: Vec<String>) {
 		}
 	}
 
-    println!("Part1: {}", part1);
-    println!("Part2: {}", part2);
+	println!("Part1: {}", part1);
+	println!("Part2: {}", part2);
 }

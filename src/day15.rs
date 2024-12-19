@@ -21,7 +21,13 @@ fn gps_sum(grid: &Vec<Vec<char>>) -> usize {
 		.map(|(r, row)| {
 			row.iter()
 				.enumerate()
-				.map(|(c, ch)| if *ch == 'O' || *ch == '[' { r * 100 + c } else { 0 })
+				.map(|(c, ch)| {
+					if *ch == 'O' || *ch == '[' {
+						r * 100 + c
+					} else {
+						0
+					}
+				})
 				.sum::<usize>()
 		})
 		.sum()
@@ -73,7 +79,13 @@ fn part1(mut grid: Vec<Vec<char>>, movements: &[char], mut robot_pos: (isize, is
 	println!("Part 1: {}", gps_sum(&grid));
 }
 
-fn try_move_box(grid: &mut Vec<Vec<char>>, box_pos: (isize, isize), dr: isize, dc: isize, do_move: bool) -> bool {
+fn try_move_box(
+	grid: &mut Vec<Vec<char>>,
+	box_pos: (isize, isize),
+	dr: isize,
+	dc: isize,
+	do_move: bool,
+) -> bool {
 	if dc == -1 {
 		let ch = grid[box_pos.0 as usize][(box_pos.1 - 1) as usize];
 		let can_move = match ch {
@@ -88,8 +100,7 @@ fn try_move_box(grid: &mut Vec<Vec<char>>, box_pos: (isize, isize), dr: isize, d
 			grid[box_pos.0 as usize][(box_pos.1 + 1) as usize] = '.';
 		}
 		return can_move;
-	}
-	else if dc == 1 {
+	} else if dc == 1 {
 		let ch = grid[box_pos.0 as usize][(box_pos.1 + 2) as usize];
 		let can_move = match ch {
 			'.' => true,
@@ -103,8 +114,7 @@ fn try_move_box(grid: &mut Vec<Vec<char>>, box_pos: (isize, isize), dr: isize, d
 			grid[box_pos.0 as usize][(box_pos.1 + 2) as usize] = ']';
 		}
 		return can_move;
-	}
-	else {
+	} else {
 		let ch1 = grid[(box_pos.0 + dr) as usize][box_pos.1 as usize];
 		let ch2 = grid[(box_pos.0 + dr) as usize][(box_pos.1 + 1) as usize];
 		let can_move_1 = match ch1 {
@@ -138,8 +148,7 @@ fn try_move2(grid: &mut Vec<Vec<char>>, robot_pos: &mut (isize, isize), dr: isiz
 	let new_r = r + dr;
 	let new_c = c + dc;
 
-	if new_r < 0 || new_r >= grid.len() as isize || new_c < 0 || new_c >= grid[0].len() as isize
-	{
+	if new_r < 0 || new_r >= grid.len() as isize || new_c < 0 || new_c >= grid[0].len() as isize {
 		return;
 	}
 

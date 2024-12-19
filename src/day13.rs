@@ -19,7 +19,7 @@ fn sub_solve(params: &Params) -> Option<(i64, i64)> {
 
 	let determinant_a = params.p.0 * params.b.1 - params.p.1 * params.b.0;
 	let determinant_b = params.a.0 * params.p.1 - params.a.1 * params.p.0;
-	
+
 	let a = determinant_a / determinant;
 	let b = determinant_b / determinant;
 
@@ -64,10 +64,7 @@ pub fn solve(inputs: Vec<String>) {
 		let params_part2 = Params {
 			a: params.a,
 			b: params.b,
-			p: (
-				params.p.0 + 10000000000000,
-				params.p.1 + 10000000000000,
-			),
+			p: (params.p.0 + 10000000000000, params.p.1 + 10000000000000),
 		};
 
 		if let Some((a, b)) = sub_solve(&params) {
