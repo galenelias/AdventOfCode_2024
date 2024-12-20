@@ -1,58 +1,5 @@
 use itertools::Itertools;
-use std::collections::{HashSet, HashMap, BinaryHeap, VecDeque};
-use std::cmp::Ordering;
-
-fn bfs2(
-	grid: &Vec<Vec<char>>,
-	start: (usize, usize),
-	end: (usize, usize),
-	cheat_length: usize,
-) -> usize {
-	let mut queue: VecDeque<((usize, usize), usize, Option<usize>)> = VecDeque::new();
-	let mut seen = HashSet::new();
-
-	queue.push_back((start, 0, None));
-
-	while !queue.is_empty() {
-		let (pos, steps, cheat_remaining) = queue.pop_front().unwrap();
-
-		if grid[pos.0][pos.1] == '#' && cheat_remaining.unwrap_or(0) == 0 {
-			continue;
-		}
-
-		if pos.0 == 0 || pos.0 == grid.len() - 1 || pos.1 == 0 || pos.1 == grid[0].len() - 1 {
-			continue;
-		}
-
-		if pos == end {
-			return steps;
-		}
-
-		if !seen.insert(pos) {
-			continue;
-		}
-
-		let cheat_left = match cheat_remaining {
-			Some(0) => Some(0),
-			Some(n) => Some(n - 1),
-			None => None,
-		};
-
-		queue.push_back(((pos.0 - 1, pos.1), steps + 1, cheat_left));
-		queue.push_back(((pos.0 + 1, pos.1), steps + 1, cheat_left));
-		queue.push_back(((pos.0, pos.1 - 1), steps + 1, cheat_left));
-		queue.push_back(((pos.0, pos.1 + 1), steps + 1, cheat_left));
-
-		if cheat_remaining.is_none() && cheat_length > 0 {
-			queue.push_back(((pos.0 - 1, pos.1), steps + 1, Some(cheat_length - 1)));
-			queue.push_back(((pos.0 + 1, pos.1), steps + 1, Some(cheat_length - 1)));
-			queue.push_back(((pos.0, pos.1 - 1), steps + 1, Some(cheat_length - 1)));
-			queue.push_back(((pos.0, pos.1 + 1), steps + 1, Some(cheat_length - 1)));
-		}
-	}
-
-	unreachable!()
-}
+use std::collections::VecDeque;
 
 fn grid_dist(p1: (usize, usize), p2: (usize, usize)) -> usize {
 	p1.0.abs_diff(p2.0) + p1.1.abs_diff(p2.1)
@@ -64,32 +11,17 @@ struct State {
 	steps: usize,
 }
 
-impl Ord for State {
-	fn cmp(&self, other: &Self) -> Ordering {
-		self.steps.cmp(&(other.steps)).reverse()
-	}
-}
+fn compute_distances(grid: &Vec<Vec<char>>, start: (usize, usize)) -> Vec<Vec<usize>> {
+	let mut dist = vec![vec![usize::MAX; grid[0].len()]; grid.len()];
+	let mut queue = VecDeque::new();
 
-impl PartialOrd for State {
-	fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-		Some(self.cmp(other))
-	}
-}
-
-fn bfs(
-	grid: &Vec<Vec<char>>,
-	start: (usize, usize),
-	end: (usize, usize),
-	cheat_start: (usize, usize),
-	chat_end: (usize, usize),
-) -> usize {
-	let mut queue = BinaryHeap::new();
-	let mut seen = HashSet::new();
-
-	queue.push(State{ pos: start, steps: 0});
+	queue.push_back(State {
+		pos: start,
+		steps: 0,
+	});
 
 	while !queue.is_empty() {
-		let state = queue.pop().unwrap();
+		let state = queue.pop_front().unwrap();
 		let (pos, steps) = (state.pos, state.steps);
 
 		if grid[pos.0][pos.1] == '#' {
@@ -100,29 +32,32 @@ fn bfs(
 			continue;
 		}
 
-		if pos == end {
-			return steps;
-		}
-
-		if pos == cheat_start {
-			queue.push(State{ pos: chat_end, steps: steps + grid_dist(cheat_start, chat_end)});
+		if dist[pos.0][pos.1] != usize::MAX {
 			continue;
 		}
 
-		if !seen.insert(pos) {
-			continue;
-		}
+		dist[pos.0][pos.1] = steps;
 
-		queue.push(State{pos: (pos.0 - 1, pos.1), steps: steps + 1});
-		queue.push(State{pos: (pos.0 + 1, pos.1), steps: steps + 1});
-		queue.push(State{pos: (pos.0, pos.1 - 1), steps: steps + 1});
-		queue.push(State{pos: (pos.0, pos.1 + 1), steps: steps + 1});
+		queue.push_back(State {
+			pos: (pos.0 - 1, pos.1),
+			steps: steps + 1,
+		});
+		queue.push_back(State {
+			pos: (pos.0 + 1, pos.1),
+			steps: steps + 1,
+		});
+		queue.push_back(State {
+			pos: (pos.0, pos.1 - 1),
+			steps: steps + 1,
+		});
+		queue.push_back(State {
+			pos: (pos.0, pos.1 + 1),
+			steps: steps + 1,
+		});
 	}
 
-	usize::MAX
-	// unreachable!()
+	dist
 }
-
 
 pub fn solve(inputs: Vec<String>) {
 	let mut grid = inputs
@@ -154,38 +89,39 @@ pub fn solve(inputs: Vec<String>) {
 	grid[end.0][end.1] = '.';
 	let grid = grid;
 
-	let base_time = bfs(&grid, start, end, (0,0), (0, 0));
+	let dist_from_start = compute_distances(&grid, start);
+	let dist_to_end = compute_distances(&grid, end);
+	let base_time = dist_from_start[end.0][end.1];
 
-	let mut part1 = 0;
-	// let mut cheat_savings = HashMap::new();
-
-	for r in 1..grid.len()-1 {
-		println!("Row {}", r);
-	    for c in 1..grid[r].len()-1 {
-	        if grid[r][c] == '.' {
-				for r2 in 1..grid.len()-1 {
-					for c2 in 1..grid[r2].len()-1 {
-						if (r != r2 || c != c2) && grid[r2][c2] == '.' && grid_dist((r, c), (r2, c2)) <= 20 {
-							let time = bfs(&grid, start, end, (r, c), (r2, c2));
-							if time < base_time {
-								if base_time - time >= 100 {
-									part1 += 1;
+	// Find all (Cheat Start, Cheat End) positions which would save steps
+	// The cheat acts as a portal stitching distance to Cheat Start with the distance
+	// from Cheat End to the finish with the manhattan distance between Cheat Start and Cheat End
+	let find_cheats = |cheat_len: usize| {
+		let mut cheats = 0;
+		for r1 in 1..grid.len() - 1 {
+			for c1 in 1..grid[r1].len() - 1 {
+				if grid[r1][c1] == '.' {
+					for r2 in 1..grid.len() - 1 {
+						for c2 in 1..grid[r2].len() - 1 {
+							if (r1 != r2 || c1 != c2)
+								&& grid[r2][c2] == '.' && grid_dist((r1, c1), (r2, c2)) <= cheat_len
+							{
+								let time = dist_from_start[r1][c1]
+									+ dist_to_end[r2][c2] + grid_dist((r1, c1), (r2, c2));
+								if time < base_time {
+									if base_time - time >= 100 {
+										cheats += 1;
+									}
 								}
-								// if (base_time - time) >= 50 {
-								// 	*cheat_savings.entry(base_time - time).or_insert(0) += 1;
-								// 	// println!("Saved {}", base_time - time);
-								// }
 							}
 						}
 					}
 				}
-	        }
-	    }
-	}
+			}
+		}
+		cheats
+	};
 
-	// for k in cheat_savings.keys().sorted() {
-	// 	println!("There are {} cheats that saved {} picoseconds.", cheat_savings[k], k);
-	// }
-
-	println!("Part 1: {}", part1);
+	println!("Part 1: {}", find_cheats(2));
+	println!("Part 2: {}", find_cheats(20));
 }
