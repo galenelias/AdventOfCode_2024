@@ -11,7 +11,6 @@ fn next_secret(mut current: i64) -> i64 {
 
 pub fn solve(inputs: Vec<String>) {
 	let mut part1 = 0;
-	let mut part2 = 0;
 
 	let mut prices = vec![Vec::with_capacity(2000); inputs.len()];
 	let mut deltas = vec![Vec::with_capacity(2000); inputs.len()];
@@ -36,24 +35,14 @@ pub fn solve(inputs: Vec<String>) {
 		}
 	}
 
-	for d1 in -10..=10 {
-		for d2 in -10..=10 {
-			for d3 in -10..=10 {
-				for d4 in -10..=10 {
-					let pattern: [i64; 4] = [d1, d2, d3, d4];
-					let mut sum = 0;
-					for i in 0..prices.len() {
-						if let Some(price) = delta_maps[i].get(&pattern[..]) {
-							sum += price;
-						}
-					}
-					if sum > part2 {
-						part2 = sum;
-					}
-				}
-			}
+	let mut bananas_per_delta: HashMap<&[i64], i64> = HashMap::new();
+	for delta_map in &delta_maps{
+		for (delta, price) in delta_map.iter() {
+			*bananas_per_delta.entry(delta).or_insert(0) += price;
 		}
 	}
+
+	let part2 = bananas_per_delta.values().max().unwrap();
 
 	println!("Part 1: {}", part1);
 	println!("Part 2: {}", part2);
