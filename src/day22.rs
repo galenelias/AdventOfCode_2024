@@ -28,15 +28,17 @@ pub fn solve(inputs: Vec<String>) {
 		part1 += num;
 	}
 
-	let mut delta_maps : Vec<HashMap<&[i64], i64>> = vec![HashMap::new(); inputs.len()];
+	let mut delta_maps: Vec<HashMap<&[i64], i64>> = vec![HashMap::new(); inputs.len()];
 	for (i, deltas) in deltas.iter().enumerate() {
 		for di in 0..deltas.len() - 4 {
-			delta_maps[i].entry(&deltas[di..di + 4]).or_insert(prices[i][di + 4]);
+			delta_maps[i]
+				.entry(&deltas[di..di + 4])
+				.or_insert(prices[i][di + 4]);
 		}
 	}
 
 	let mut bananas_per_delta: HashMap<&[i64], i64> = HashMap::new();
-	for delta_map in &delta_maps{
+	for delta_map in &delta_maps {
 		for (delta, price) in delta_map.iter() {
 			*bananas_per_delta.entry(delta).or_insert(0) += price;
 		}
