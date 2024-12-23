@@ -1,6 +1,5 @@
 use itertools::Itertools;
-use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashMap, HashSet};
+use std::collections::HashMap;
 
 const NUM_KEYPAD: [[char; 3]; 4] = [
 	['7', '8', '9'],
@@ -11,28 +10,11 @@ const NUM_KEYPAD: [[char; 3]; 4] = [
 
 const DIR_KEYPAD: [[char; 3]; 2] = [['#', '^', 'A'], ['<', 'v', '>']];
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
-struct State {
-	pos: (usize, usize),
-	offset: usize,
-	seq: Vec<char>,
-	cost: usize,
-}
-
-impl Ord for State {
-	fn cmp(&self, other: &Self) -> Ordering {
-		self.cost.cmp(&(other.cost)).reverse()
-	}
-}
-
-impl PartialOrd for State {
-	fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-		Some(self.cmp(other))
-	}
-}
-
-fn key_to_pos(key: char) -> (usize, usize) {
-	for (r, row) in DIR_KEYPAD.iter().enumerate() {
+fn key_to_pos<const ROW_COUNT: usize, const COL_COUNT: usize>(
+	key: char,
+	grid: &[[char; COL_COUNT]; ROW_COUNT],
+) -> (usize, usize) {
+	for (r, row) in grid.iter().enumerate() {
 		for (c, &ch) in row.iter().enumerate() {
 			if ch == key {
 				return (r, c);
@@ -42,213 +24,125 @@ fn key_to_pos(key: char) -> (usize, usize) {
 	unreachable!("Invalid key: {}", key);
 }
 
-fn numpad_seq_len(moves: &[char]) -> usize {
-	let mut queue = BinaryHeap::new();
-
-	queue.push(State {
-		pos: (3, 2),
-		offset: 0,
-		seq: vec![],
-		cost: 0,
-	});
-
-	let mut visited = HashSet::new();
-	while !queue.is_empty() {
-		let state = queue.pop().unwrap();
-		let (pos, cost) = (state.pos, state.cost);
-
-		println!("State: {:?}", state);
-
-		// let prev_letter = if state.offset == 0 { outer_prev_letter } else { moves[state.offset - 1] };
-		let prev_letter = if state.seq.is_empty() { 'A' } else { *state.seq.last().unwrap() };
-		// let prev_letter = 'A';
-		// if state.offset > 0 {
-		// 	println!("Prev letter: {}", prev_letter);
-		// }
-
-		if state.offset == moves.len() {
-			// if layer == 2 {
-			println!("NumPad: {} = {} ({})", moves.iter().join(""), state.seq.iter().join(""), cost);
-			// }
-			// memo.insert((layer, outer_prev_letter, moves.iter().cloned().collect_vec()), cost);
-			return cost;
+fn path_valid<const ROW_COUNT: usize, const COL_COUNT: usize>(
+	start: (usize, usize),
+	path: &[char],
+	grid: &[[char; COL_COUNT]; ROW_COUNT],
+) -> bool {
+	let mut pos = start;
+	for &ch in path {
+		match ch {
+			'^' => pos.0 = pos.0.saturating_sub(1),
+			'v' => pos.0 = pos.0.saturating_add(1),
+			'<' => pos.1 = pos.1.saturating_sub(1),
+			'>' => pos.1 = pos.1.saturating_add(1),
+			'A' => (),
+			_ => unreachable!("Invalid direction: {}", ch),
 		}
-
-		if NUM_KEYPAD[pos.0][pos.1] == '#' {
-			continue;
-		} else if NUM_KEYPAD[pos.0][pos.1] == moves[state.offset] {
-			// Push button
-			let mut memo: HashMap<(usize, char, Vec<char>), usize> = HashMap::new();
-			queue.push(State {
-				pos: pos,
-				offset: state.offset + 1,
-				seq: state.seq.iter().cloned().chain(['A']).collect(),
-				cost: cost + seq_len(&['A'], 2, prev_letter, &mut memo),
-			});
-		} else {
-			if !visited.insert((pos, state.offset)) {
-				continue;
-			}
-
-			if pos.0 > 0 {
-				let mut memo: HashMap<(usize, char, Vec<char>), usize> = HashMap::new();
-				queue.push(State {
-					pos: (pos.0 - 1, pos.1),
-					offset: state.offset,
-					seq: state.seq.iter().cloned().chain(['^']).collect(),
-					cost: cost + seq_len(&['^'], 2, prev_letter, &mut memo),
-				});
-			}
-			if pos.0 < NUM_KEYPAD.len() - 1 {
-				let mut memo: HashMap<(usize, char, Vec<char>), usize> = HashMap::new();
-				queue.push(State {
-					pos: (pos.0 + 1, pos.1),
-					offset: state.offset,
-					seq: state.seq.iter().cloned().chain(['v']).collect(),
-					cost: cost + seq_len(&['v'], 2, prev_letter, &mut memo),
-				});
-			}
-			if pos.1 > 0 {
-				let mut memo: HashMap<(usize, char, Vec<char>), usize> = HashMap::new();
-				queue.push(State {
-					pos: (pos.0, pos.1 - 1),
-					offset: state.offset,
-					seq: state.seq.iter().cloned().chain(['<']).collect(),
-					cost: cost + seq_len(&['<'], 2, prev_letter, &mut memo),
-				});
-			}
-			if pos.1 < NUM_KEYPAD[0].len() - 1 {
-				let mut memo: HashMap<(usize, char, Vec<char>), usize> = HashMap::new();
-				queue.push(State {
-					pos: (pos.0, pos.1 + 1),
-					offset: state.offset,
-					seq: state.seq.iter().cloned().chain(['>']).collect(),
-					cost: cost + seq_len(&['>'], 2, prev_letter, &mut memo),
-				});
-			}
+		if grid[pos.0][pos.1] == '#' {
+			return false;
 		}
 	}
-
-	unreachable!()
+	return true;
 }
 
-fn seq_len(moves: &[char], layer: usize, outer_prev_letter: char, memo: &mut HashMap<(usize, char, Vec<char>), usize>) -> usize {
-	if layer == 0 {
-		return moves.len();
+fn get_seq_cost<const ROW_COUNT: usize, const COL_COUNT: usize>(
+	path: &[char],
+	grid: &[[char; COL_COUNT]; ROW_COUNT],
+	level: usize,
+	memo: &mut HashMap<(String, usize), usize>,
+) -> usize {
+	if level == 0 {
+		return path.len();
 	}
 
-	if let Some(result) = memo.get(&(layer, outer_prev_letter, moves.iter().cloned().collect_vec())) {
-		// println!("Memo'd {} -> {} = {}", prev_letter, moves.iter().join(""), result);
-		return *result;
+	let path_str = path.iter().collect::<String>();
+	if let Some(&cost) = memo.get(&(path_str.clone(), level)) {
+		return cost;
 	}
 
-	// println!("Call: layer {}, outer_prev_letter = {}, moves = {}", layer, outer_prev_letter, moves.iter().join(""));
-
-	let mut queue = BinaryHeap::new();
-
-	queue.push(State {
-		pos: key_to_pos(outer_prev_letter),
-		offset: 0,
-		seq: vec![],
-		cost: 0,
-	});
-
-	let mut visited = HashSet::new();
-	while !queue.is_empty() {
-		let state = queue.pop().unwrap();
-		let (pos, cost) = (state.pos, state.cost);
-
-		// let prev_letter = if state.offset == 0 { outer_prev_letter } else { moves[state.offset - 1] };
-		let prev_letter = if state.seq.is_empty() { outer_prev_letter } else { *state.seq.last().unwrap() };
-		// if state.offset > 0 {
-		// 	println!("Prev letter: {}", prev_letter);
-		// }
-
-		if state.offset == moves.len() {
-			// if layer == 1 {
-				println!("Layer {}: {} -> {} = {} ({})", layer, outer_prev_letter, moves.iter().join(""), state.seq.iter().join(""), cost);
-			// }
-			// memo.insert((layer, outer_prev_letter, moves.iter().cloned().collect_vec()), cost);
-			return cost;
-		}
-
-		if DIR_KEYPAD[pos.0][pos.1] == '#' {
-			continue;
-		} else if DIR_KEYPAD[pos.0][pos.1] == moves[state.offset] {
-			// Push button
-			queue.push(State {
-				pos: pos,
-				offset: state.offset + 1,
-				seq: state.seq.iter().cloned().chain(['A']).collect(),
-				cost: cost + seq_len(&['A'], layer - 1, prev_letter, memo),
-			});
-		} else {
-
-			if !visited.insert((pos, state.offset)) {
-				continue;
-			}
-
-			if pos.0 > 0 {
-				queue.push(State {
-					pos: (pos.0 - 1, pos.1),
-					offset: state.offset,
-					seq: state.seq.iter().cloned().chain(['^']).collect(),
-					cost: cost + seq_len(&['^'], layer - 1, prev_letter, memo),
-				});
-			}
-			if pos.0 < DIR_KEYPAD.len() - 1 {
-				queue.push(State {
-					pos: (pos.0 + 1, pos.1),
-					offset: state.offset,
-					seq: state.seq.iter().cloned().chain(['v']).collect(),
-					cost: cost + seq_len(&['v'], layer - 1, prev_letter, memo),
-				});
-			}
-			if pos.1 > 0 {
-				queue.push(State {
-					pos: (pos.0, pos.1 - 1),
-					offset: state.offset,
-					seq: state.seq.iter().cloned().chain(['<']).collect(),
-					cost: cost + seq_len(&['<'], layer - 1, prev_letter, memo),
-				});
-			}
-			if pos.1 < DIR_KEYPAD[0].len() - 1 {
-				queue.push(State {
-					pos: (pos.0, pos.1 + 1),
-					offset: state.offset,
-					seq: state.seq.iter().cloned().chain(['>']).collect(),
-					cost: cost + seq_len(&['>'], layer - 1, prev_letter, memo),
-				});
-			}
-		}
+	let mut pos = key_to_pos('A', grid);
+	let mut cost = 0;
+	for ch in path {
+		let next_pos = key_to_pos(*ch, grid);
+		cost += get_path_cost(grid, pos, next_pos, level, memo);
+		pos = next_pos;
 	}
 
-	unreachable!()
+	memo.insert((path_str, level), cost);
+
+	cost
 }
 
-// fn get_sequence(input: &str) -> Vec<char> {
-// 	input.chars().collect()
-// }
+fn get_path_cost<const ROW_COUNT: usize, const COL_COUNT: usize>(
+	grid: &[[char; COL_COUNT]; ROW_COUNT],
+	start: (usize, usize),
+	end: (usize, usize),
+	level: usize,
+	memo: &mut HashMap<(String, usize), usize>,
+) -> usize {
+	let dr = end.0 as isize - start.0 as isize;
+	let dc = end.1 as isize - start.1 as isize;
 
-pub fn solve(_inputs: Vec<String>) {
-	// let temp = numpad_seq_len("029A".chars().collect_vec().as_slice());
-	let temp = numpad_seq_len("0".chars().collect_vec().as_slice());
-	// let temp = seq_len("v<<A>>^A<A>AvA<^AA>A<vAAA>^A".chars().collect_vec().as_slice(), 1, 'A', &mut memo);
-	// let mut memo = HashMap::new();
-	// let temp = seq_len("<A^A^^>AvvvA".chars().collect_vec().as_slice(), 2, 'A', &mut memo);
-	// let temp = seq_len("<A^A>^^AvvvA".chars().collect_vec().as_slice(), 2, 'A', &mut memo);
-	// let temp = seq_len("<".chars().collect_vec().as_slice(), 2, 'A', &mut memo);
-	// let temp = seq_len("v<<A>>^A".chars().collect_vec().as_slice(), 1, 'A', &mut memo);
-	// let temp = seq_len(&['^', '^', '<', 'A'], 3);
-	// let temp = seq_len(&['^'], 3);
-	println!("{}", temp);
-	// let mut part1 = 0;
-	// for input in inputs {
-	// 	let num = input[0..3].parse::<usize>().unwrap();
-	// 	let sequence = get_sequence(&input);
-	// 	println!("{}, {}", num, sequence.len());
-	// 	part1 += num * sequence.len();
-	// }
+	let vertical_path = if dr > 0 {
+		['v'].repeat(dr as usize)
+	} else {
+		['^'].repeat(-dr as usize)
+	};
+	let horizontal_path = if dc > 0 {
+		['>'].repeat(dc as usize)
+	} else {
+		['<'].repeat(-dc as usize)
+	};
 
-	// println!("Part 1: {}", part1);
+	let mut path1 = Vec::new();
+	path1.extend(vertical_path.clone());
+	path1.extend(horizontal_path.clone());
+	path1.push('A');
+
+	if dr != 0 && dc != 0 {
+		// Try both combinations of moving by row or column first to see which is faster
+		let mut path2 = Vec::new();
+		path2.extend(horizontal_path);
+		path2.extend(vertical_path);
+		path2.push('A');
+
+		let path1_cost = if path_valid(start, &path1, grid) {
+			get_seq_cost(&path1, &DIR_KEYPAD, level - 1, memo)
+		} else {
+			usize::MAX
+		};
+
+		let path2_cost = if path_valid(start, &path2, grid) {
+			get_seq_cost(&path2, &DIR_KEYPAD, level - 1, memo)
+		} else {
+			usize::MAX
+		};
+
+		return std::cmp::min(path1_cost, path2_cost);
+	} else {
+		// Otherwise, our 'path1' is the only option
+		return get_seq_cost(&path1, &DIR_KEYPAD, level - 1, memo);
+	}
+}
+
+fn subsolve(number: &[char], robot_layers: usize) -> usize {
+	let mut memo = HashMap::new();
+	get_seq_cost(number, &NUM_KEYPAD, robot_layers + 1, &mut memo)
+}
+
+pub fn solve(inputs: Vec<String>) {
+	let mut part1 = 0;
+	let mut part2 = 0;
+	for input in inputs {
+		let number = input[0..3].parse::<usize>().unwrap();
+		let input = input.chars().collect_vec();
+		let part1_cost = subsolve(&input, 2);
+		let part2_cost = subsolve(&input, 25);
+
+		part1 += number * part1_cost;
+		part2 += number * part2_cost;
+	}
+	println!("Part 1: {}", part1);
+	println!("Part 2: {}", part2);
 }
